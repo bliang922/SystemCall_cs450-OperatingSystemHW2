@@ -1,0 +1,78 @@
+--- xv6_orin/defs.h	2017-08-30 14:28:29.726218000 -0500
++++ xv6/defs.h	2017-10-04 09:51:27.385013082 -0500
+@@ -116,7 +116,7 @@
+ int             wait(void);
+ void            wakeup(void*);
+ void            yield(void);
+-
++int            procState(void);
+ // swtch.S
+ void            swtch(struct context**, struct context*);
+ 
+--- xv6_orin/usys.S	2017-10-06 09:53:24.747999744 -0500
++++ xv6/usys.S	2017-10-03 08:09:41.197632948 -0500
+@@ -29,3 +29,4 @@
+ SYSCALL(sbrk)
+ SYSCALL(sleep)
+ SYSCALL(uptime)
++SYSCALL(procState)
+--- xv6_orin/syscall.h	2017-10-05 12:29:02.277509000 -0500
++++ xv6/syscall.h	2017-10-03 08:06:55.328641882 -0500
+@@ -20,3 +20,4 @@
+ #define SYS_link   19
+ #define SYS_mkdir  20
+ #define SYS_close  21
++#define SYS_procState 22
+--- xv6_orin/syscall.c	2017-10-05 14:03:51.229237000 -0500
++++ xv6/syscall.c	2017-10-04 09:32:34.887244977 -0500
+@@ -98,6 +98,7 @@
+ extern int sys_wait(void);
+ extern int sys_write(void);
+ extern int sys_uptime(void);
++extern int sys_procState(void);
+ 
+ static int (*syscalls[])(void) = {
+ [SYS_fork]    sys_fork,
+@@ -121,6 +122,7 @@
+ [SYS_link]    sys_link,
+ [SYS_mkdir]   sys_mkdir,
+ [SYS_close]   sys_close,
++[SYS_procState] sys_procState,
+ };
+ 
+ void
+--- xv6_orin/proc.c	2017-08-30 14:28:29.730218000 -0500
++++ xv6/proc.c	2017-10-04 13:18:33.606659816 -0500
+@@ -7,6 +7,8 @@
+ #include "proc.h"
+ #include "spinlock.h"
+ 
++#include "stat.h"
++
+ struct {
+   struct spinlock lock;
+   struct proc proc[NPROC];
+@@ -455,5 +457,23 @@
+     cprintf("\n");
+   }
+ }
++int 
++procState(void)
++{
++   struct proc *p;    
++const char *procstate[]={"UNUSED", "EMBRYO", "SLEEPING", "RUNNABLE", "RUNNING", "ZOMBIE" };
++   acquire(&ptable.lock);
++   cprintf("name    state       ID    Memory \n");
++  for(p = ptable.proc; p < &ptable.proc[NPROC-1]; p++)
++     {    
++ 	if(p->state == UNUSED)
++         continue;
++
++	cprintf("%s  |  %s,  |  %d |  %d Kbytes\n",p->name,procstate[p->state],p->pid,p->sz);
++     }
++  release(&ptable.lock);
++  exit();
++  return 1;
++}
+ 
+ 
